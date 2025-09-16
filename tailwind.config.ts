@@ -22,6 +22,7 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          glow: "hsl(var(--primary-glow))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -56,6 +57,30 @@ export default {
           "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
+        },
+        // Quest & gamification colors
+        quest: {
+          easy: "hsl(var(--quest-easy))",
+          medium: "hsl(var(--quest-medium))",
+          hard: "hsl(var(--quest-hard))",
+        },
+        token: {
+          gold: "hsl(var(--token-gold))",
+        },
+        badge: {
+          bronze: "hsl(var(--badge-bronze))",
+          silver: "hsl(var(--badge-silver))",
+          gold: "hsl(var(--badge-gold))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        progress: {
+          bg: "hsl(var(--progress-bg))",
+        },
+        xp: {
+          bar: "hsl(var(--xp-bar))",
         },
       },
       borderRadius: {
