@@ -18,9 +18,9 @@ const ProfileScreen = () => {
         <Card className="mb-6">
           <CardContent className="p-6 text-center">
             <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center text-4xl mx-auto mb-4">
-              {currentUser?.avatar}
+              👤
             </div>
-            <h1 className="text-2xl font-bold mb-1">{currentUser?.displayName}</h1>
+            <h1 className="text-2xl font-bold mb-1">{currentUser?.display_name}</h1>
             <p className="text-muted-foreground mb-4">Grade {currentUser?.grade} • {currentUser?.type}</p>
             
             <div className="grid grid-cols-3 gap-4">
@@ -81,7 +81,7 @@ const ProfileScreen = () => {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Member since</span>
-              <span>{new Date(currentUser?.joinedDate || '').toLocaleDateString()}</span>
+              <span>{new Date(currentUser?.created_at || '').toLocaleDateString()}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Courses completed</span>

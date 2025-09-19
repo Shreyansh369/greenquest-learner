@@ -3,18 +3,17 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
 import CryptoJS from 'crypto-js';
 import { 
-  DemoAccount, 
   SkillLane, 
   SkillNode, 
   Quest,
   Badge,
   Course,
-  demoAccounts,
   skillLanes as initialSkillLanes,
   badges as initialBadges,
   marketplaceCourses,
   tokenCalculatorConfig
 } from '../data/seedData';
+import { Profile } from '../hooks/useAuth';
 
 // Types for store state
 export interface QuestSubmission {
@@ -55,8 +54,6 @@ export interface UserProgress {
 }
 
 export interface AppSettings {
-  currentUserId: string | null;
-  teacherModeEnabled: boolean;
   isOnline: boolean;
   notifications: boolean;
   soundEnabled: boolean;
@@ -65,8 +62,7 @@ export interface AppSettings {
 
 interface GreenQuestStore {
   // Auth & Users
-  accounts: DemoAccount[];
-  currentUser: DemoAccount | null;
+  currentUser: Profile | null;
   settings: AppSettings;
   
   // Learning Content
@@ -79,9 +75,7 @@ interface GreenQuestStore {
   questSubmissions: QuestSubmission[];
   
   // Actions - Auth
-  switchAccount: (accountId: string) => void;
-  enableTeacherMode: (pin: string) => boolean;
-  disableTeacherMode: () => void;
+  setCurrentUser: (user: Profile | null) => void;
   
   // Actions - Learning Progress
   completeLesson: (nodeId: string) => void;
@@ -111,8 +105,6 @@ interface GreenQuestStore {
 }
 
 const defaultSettings: AppSettings = {
-  currentUserId: null,
-  teacherModeEnabled: false,
   isOnline: false,
   notifications: true,
   soundEnabled: true,
@@ -134,7 +126,6 @@ export const useStore = create<GreenQuestStore>()(
   persist(
     (set, get) => ({
       // Initial State
-      accounts: demoAccounts,
       currentUser: null,
       settings: defaultSettings,
       skillLanes: initialSkillLanes.map(lane => ({
@@ -152,39 +143,17 @@ export const useStore = create<GreenQuestStore>()(
       questSubmissions: [],
 
       // Auth Actions
-      switchAccount: (accountId: string) => {
-        const account = get().accounts.find(acc => acc.id === accountId);
-        if (account) {
-          set(state => {
+      setCurrentUser: (user: Profile | null) => {
+        set(state => {
+          if (user) {
             // Initialize progress if doesn't exist
-            if (!state.userProgress[accountId]) {
-              state.userProgress[accountId] = createDefaultUserProgress(accountId);
+            if (!state.userProgress[user.user_id]) {
+              state.userProgress[user.user_id] = createDefaultUserProgress(user.user_id);
             }
-            
-            return {
-              currentUser: account,
-              settings: { ...state.settings, currentUserId: accountId, teacherModeEnabled: false }
-            };
-          });
-        }
-      },
-
-      enableTeacherMode: (pin: string) => {
-        const teacherAccount = get().accounts.find(acc => acc.type === 'teacher' && acc.pin === pin);
-        if (teacherAccount) {
-          set(state => ({
-            currentUser: teacherAccount,
-            settings: { ...state.settings, teacherModeEnabled: true, currentUserId: teacherAccount.id }
-          }));
-          return true;
-        }
-        return false;
-      },
-
-      disableTeacherMode: () => {
-        set(state => ({
-          settings: { ...state.settings, teacherModeEnabled: false }
-        }));
+          }
+          
+          return { currentUser: user };
+        });
       },
 
       // Learning Progress Actions
@@ -193,7 +162,7 @@ export const useStore = create<GreenQuestStore>()(
         if (!currentUser) return;
 
         set(state => {
-          const progress = state.userProgress[currentUser.id] || createDefaultUserProgress(currentUser.id);
+          const progress = state.userProgress[currentUser.user_id] || createDefaultUserProgress(currentUser.user_id);
           
           // Find the node and mark lesson as viewed
           const node = state.skillLanes
@@ -210,7 +179,7 @@ export const useStore = create<GreenQuestStore>()(
           }
           
           return {
-            userProgress: { ...state.userProgress, [currentUser.id]: progress }
+            userProgress: { ...state.userProgress, [currentUser.user_id]: progress }
           };
         });
       },
@@ -220,7 +189,7 @@ export const useStore = create<GreenQuestStore>()(
         if (!currentUser) return;
 
         set(state => {
-          const progress = state.userProgress[currentUser.id] || createDefaultUserProgress(currentUser.id);
+          const progress = state.userProgress[currentUser.user_id] || createDefaultUserProgress(currentUser.user_id);
           
           // Find the node
           const nodeIndex = state.skillLanes.findIndex(lane => 
@@ -269,7 +238,7 @@ export const useStore = create<GreenQuestStore>()(
               
               return {
                 skillLanes: updatedLanes,
-                userProgress: { ...state.userProgress, [currentUser.id]: progress }
+                userProgress: { ...state.userProgress, [currentUser.user_id]: progress }
               };
             }
           }
@@ -301,7 +270,7 @@ export const useStore = create<GreenQuestStore>()(
         if (!currentUser) return;
 
         set(state => {
-          const progress = state.userProgress[currentUser.id] || createDefaultUserProgress(currentUser.id);
+          const progress = state.userProgress[currentUser.user_id] || createDefaultUserProgress(currentUser.user_id);
           
           if (!progress.badges.includes(badgeId)) {
             progress.badges.push(badgeId);
@@ -314,7 +283,7 @@ export const useStore = create<GreenQuestStore>()(
           }
           
           return {
-            userProgress: { ...state.userProgress, [currentUser.id]: progress }
+            userProgress: { ...state.userProgress, [currentUser.user_id]: progress }
           };
         });
       },
@@ -329,7 +298,7 @@ export const useStore = create<GreenQuestStore>()(
         
         // Create submission hash for verification
         const hashData = {
-          studentId: currentUser.id,
+          studentId: currentUser.user_id,
           questId,
           timestamp,
           ...submissionData
@@ -340,7 +309,7 @@ export const useStore = create<GreenQuestStore>()(
         const submission: QuestSubmission = {
           id: submissionId,
           questId,
-          studentId: currentUser.id,
+          studentId: currentUser.user_id,
           submissionHash,
           timestamp,
           status: 'pending',
@@ -379,7 +348,7 @@ export const useStore = create<GreenQuestStore>()(
               ? {
                   ...s,
                   status: 'approved' as const,
-                  validatorId: currentUser.id,
+                  validatorId: currentUser.user_id,
                   validatorComments: comments,
                   qualityScore,
                   tokensAwarded
@@ -425,7 +394,7 @@ export const useStore = create<GreenQuestStore>()(
               ? {
                   ...s,
                   status: 'rejected' as const,
-                  validatorId: currentUser.id,
+                  validatorId: currentUser.user_id,
                   validatorComments: comments
                 }
               : s
@@ -521,26 +490,22 @@ export const useStore = create<GreenQuestStore>()(
       },
 
       getLeaderboard: (scope: 'class' | 'school') => {
-        const { userProgress, accounts } = get();
+        const { userProgress } = get();
         
         const leaderboard = Object.entries(userProgress)
           .map(([userId, progress]) => {
-            const account = accounts.find(acc => acc.id === userId);
-            if (!account || account.type === 'teacher') return null;
-            
             const totalXP = Object.values(progress.skillLanes)
               .reduce((sum, lane) => sum + lane.totalXP, 0);
               
             return {
               userId,
-              displayName: account.displayName,
+              displayName: `User ${userId.slice(0, 8)}`, // Simple display name
               totalXP,
               position: 0 // Will be set after sorting
             };
           })
-          .filter(entry => entry !== null)
-          .sort((a, b) => b!.totalXP - a!.totalXP)
-          .map((entry, index) => ({ ...entry!, position: index + 1 }));
+          .sort((a, b) => b.totalXP - a.totalXP)
+          .map((entry, index) => ({ ...entry, position: index + 1 }));
           
         return leaderboard;
       },
@@ -565,7 +530,7 @@ export const useStore = create<GreenQuestStore>()(
       getCurrentUserProgress: () => {
         const { currentUser, userProgress } = get();
         if (!currentUser) return null;
-        return userProgress[currentUser.id] || createDefaultUserProgress(currentUser.id);
+        return userProgress[currentUser.user_id] || createDefaultUserProgress(currentUser.user_id);
       },
 
       getPendingSubmissions: () => {
@@ -581,7 +546,6 @@ export const useStore = create<GreenQuestStore>()(
       name: 'greenquest-storage',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        accounts: state.accounts,
         settings: state.settings,
         skillLanes: state.skillLanes,
         userProgress: state.userProgress,

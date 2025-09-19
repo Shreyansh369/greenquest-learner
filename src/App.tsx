@@ -4,10 +4,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useStore } from "./store/useStore";
+import { useAuth } from "./hooks/useAuth";
 import { useEffect } from "react";
 
 // Import screens
-import OnboardingScreen from "./screens/OnboardingScreen";
+import AuthScreen from "./screens/AuthScreen";
 import HomeScreen from "./screens/HomeScreen";
 import LessonScreen from "./screens/LessonScreen";
 import QuizScreen from "./screens/QuizScreen";
@@ -23,7 +24,13 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => {
-  const { currentUser } = useStore();
+  const { user, profile, loading } = useAuth();
+  const { setCurrentUser } = useStore();
+  
+  // Update store when profile changes
+  useEffect(() => {
+    setCurrentUser(profile);
+  }, [profile, setCurrentUser]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -32,13 +39,18 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <div className="min-h-screen bg-background">
-            <Routes>
-              {!currentUser ? (
-                <>
-                  <Route path="/" element={<OnboardingScreen />} />
-                  <Route path="/onboarding" element={<OnboardingScreen />} />
-                </>
-              ) : (
+            {loading ? (
+              <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              <Routes>
+                {!user ? (
+                  <>
+                    <Route path="/" element={<AuthScreen />} />
+                    <Route path="/auth" element={<AuthScreen />} />
+                  </>
+                ) : (
                 <>
                   <Route path="/" element={<HomeScreen />} />
                   <Route path="/home" element={<HomeScreen />} />
@@ -52,9 +64,10 @@ const App = () => {
                   <Route path="/profile" element={<ProfileScreen />} />
                   <Route path="/settings" element={<SettingsScreen />} />
                 </>
-              )}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+                )}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            )}
           </div>
         </BrowserRouter>
       </TooltipProvider>

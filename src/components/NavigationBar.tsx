@@ -52,8 +52,8 @@ const NavigationBar = () => {
     }
   ];
 
-  // Add teacher item if in teacher mode
-  if (settings.teacherModeEnabled) {
+  // Add teacher item if user is a teacher
+  if (currentUser?.type === 'teacher') {
     navItems.splice(1, 0, {
       icon: GraduationCap,
       label: 'Teacher',

@@ -1,12 +1,12 @@
 import React from 'react';
-import { useStore } from '@/store/useStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, User, Bell, Volume2, RefreshCw, LogOut } from 'lucide-react';
 import NavigationBar from '@/components/NavigationBar';
 import { useNavigate } from 'react-router-dom';
+import { useStore } from '@/store/useStore';
+import { useAuth } from '@/hooks/useAuth';
 
 const SettingsScreen = () => {
   const navigate = useNavigate();
@@ -14,19 +14,20 @@ const SettingsScreen = () => {
     currentUser, 
     settings, 
     updateSettings, 
-    accounts,
-    switchAccount,
     resetProgress 
   } = useStore();
-
-  const handleAccountSwitch = (accountId: string) => {
-    switchAccount(accountId);
-    navigate('/home');
-  };
+  const { signOut } = useAuth();
 
   const handleResetProgress = () => {
     if (confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
       resetProgress();
+    }
+  };
+
+  const handleSignOut = async () => {
+    if (confirm('Are you sure you want to sign out?')) {
+      await signOut();
+      navigate('/auth');
     }
   };
 
@@ -51,44 +52,16 @@ const SettingsScreen = () => {
           </CardHeader>
           <CardContent>
             <div className="flex items-center gap-3 mb-4">
-              <div className="text-2xl">{currentUser?.avatar}</div>
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-lg">
+                👤
+              </div>
               <div>
-                <div className="font-medium">{currentUser?.displayName}</div>
+                <div className="font-medium">{currentUser?.display_name}</div>
                 <div className="text-sm text-muted-foreground">
-                  {currentUser?.type === 'teacher' ? 'Teacher' : `Grade ${currentUser?.grade}`}
+                  {currentUser?.type === 'teacher' ? 'Teacher' : `Grade ${currentUser?.grade || 'Student'}`}
                 </div>
               </div>
-              {settings.teacherModeEnabled && (
-                <Badge variant="secondary">Teacher Mode</Badge>
-              )}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Switch Account */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Switch Account</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {accounts.filter(acc => acc.id !== currentUser?.id).map((account) => (
-              <Button
-                key={account.id}
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => handleAccountSwitch(account.id)}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-lg">{account.avatar}</span>
-                  <div className="text-left">
-                    <div className="font-medium">{account.displayName}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {account.type === 'teacher' ? 'Teacher' : `Grade ${account.grade}`}
-                    </div>
-                  </div>
-                </div>
-              </Button>
-            ))}
           </CardContent>
         </Card>
 
@@ -151,10 +124,7 @@ const SettingsScreen = () => {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => {
-                updateSettings({ currentUserId: null });
-                navigate('/');
-              }}
+              onClick={handleSignOut}
             >
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
